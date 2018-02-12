@@ -36,7 +36,6 @@ class ExampleTask(luigi.Task):
 		try:
 			sql = "SELECT distinct data FROM {} WHERE data in :date_list".format("tabela_exemplo")
 			result = conn.execute(sql, date_list=parameter_tuples)
-			print(result)
 
 		finally:
 			if not conn.closed:
