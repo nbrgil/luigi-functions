@@ -1,4 +1,4 @@
 SHELL := /bin/bash
 
 start-env:
-    docker run --name some-postgres -p 5432:5432 -e POSTGRES_PASSWORD=pass -d postgres
+	docker-compose -f docker-compose.yml -p dwdockerenv up -d
