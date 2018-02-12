@@ -1,11 +1,14 @@
+import datetime
+
 import luigi
 from sqlalchemy import create_engine
 
 from postgres_target import PostgresCountTarget
+
 postgres_engine = create_engine("postgresql://postgres:senha@localhost/postgres", pool_size=20)
 
 
-class ExampleTask(luigi.Task):
+class ExampleUsingWrapper(luigi.Task):
 	date = luigi.DateParameter()
 	force = luigi.BoolParameter(significant=False, default=False)
 
@@ -27,22 +30,6 @@ class ExampleTask(luigi.Task):
 			if not conn.closed:
 				conn.close()
 
-	@classmethod
-	def bulk_complete(cls, parameter_tuples):
-
-		conn = postgres_engine.connect()
-		result = []
-
-		try:
-			sql = "SELECT distinct data FROM {} WHERE data in :date_list".format("tabela_exemplo")
-			result = conn.execute(sql, date_list=parameter_tuples)
-			print(result)
-
-		finally:
-			if not conn.closed:
-				conn.close()
-			return result
-
 	def run(self):
 		conn = postgres_engine.connect()
 
@@ -58,3 +45,33 @@ class ExampleTask(luigi.Task):
 			table_name="tabela_exemplo",
 			sql_filter="where data = '{}'".format(self.date)
 		)
+
+
+#
+class ExampleAllYear(luigi.WrapperTask):
+	start = luigi.DateParameter()
+	stop = luigi.DateParameter()
+	task = luigi.TaskParameter()
+
+	def requires(self):
+		date1 = self.start
+		date2 = self.stop
+		day = datetime.timedelta(days=1)
+
+		# noinspection PyTypeChecker
+		while date1 <= date2:
+			date1 = date1 + day
+
+			# noinspection PyCallingNonCallable
+			yield self.task(date=date1)
+
+
+if __name__ == '__main__':
+	luigi.run(
+		cmdline_args=[
+			"--start", "2017-01-01", "--stop", "2017-01-30", "--task", "ExampleUsingWrapper"
+		],
+		main_task_cls=ExampleAllYear,
+		local_scheduler=True)
+
+
